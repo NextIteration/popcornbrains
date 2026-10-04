@@ -12,7 +12,7 @@ import type {
   UserIntent,
 } from '../../desktop/shared/types.js';
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = 'http://localhost:3001/api';
 
 export function useStatistics(): DailyStatistics {
   const [stats, setStats] = useState<DailyStatistics>({

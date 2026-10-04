@@ -45,7 +45,7 @@ export class ActivityService {
   public start() {
     console.log('[ActivityService] Starting unified pipeline...');
     this.tracker.start(); // Start desktop polling
-    this.server.start(3000); // Start HTTP server on port 3000
+    this.server.start(3001); // Start HTTP server on port 3001
   }
 
   public stop() {

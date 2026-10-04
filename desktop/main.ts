@@ -93,7 +93,7 @@ console.log('┌─────────────────────�
 console.log('│     PopcornBrains Backend — Running       │');
 console.log('│                                          │');
 console.log('│  Desktop Tracker:  polling active window  │');
-console.log('│  HTTP Server:      http://localhost:3000   │');
+console.log('│  HTTP Server:      http://localhost:3001   │');
 console.log('│  Dashboard:        npm run dev             │');
 console.log('└──────────────────────────────────────────┘');
 activityService.start();

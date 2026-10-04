@@ -7,6 +7,7 @@ import type { ActivityEvent, DriftEvent, ActivityEntry } from '../shared/types.j
 
 export class SQLiteDatabase implements IDatabase {
   private db: Database.Database;
+  private sessionStartMs: number | null = null;
 
   constructor(dbPath: string) {
     const dir = path.dirname(dbPath);
@@ -105,21 +106,29 @@ export class SQLiteDatabase implements IDatabase {
     return d.getTime();
   }
 
+  public setSessionStartMs(ms: number | null) {
+    this.sessionStartMs = ms;
+  }
+
+  private getStartTimeMs(): number {
+    return this.sessionStartMs || this.getStartOfDayMs();
+  }
+
   // ----- IDatabase Implementation -----
 
   getScreenTimeToday(): number {
-    const startOfDay = this.getStartOfDayMs();
+    const startTime = this.getStartTimeMs();
     const stmt = this.db.prepare(`
       SELECT SUM(duration_s) as total_s 
       FROM activity_events 
       WHERE timestamp_ms >= ? AND is_idle = 0
     `);
-    const row = stmt.get(startOfDay) as { total_s: number | null };
+    const row = stmt.get(startTime) as { total_s: number | null };
     return (row.total_s || 0) * 1000;
   }
 
   getAppUsageToday(): Array<{ app: string; durationMs: number }> {
-    const startOfDay = this.getStartOfDayMs();
+    const startTime = this.getStartTimeMs();
     const stmt = this.db.prepare(`
       SELECT application, SUM(duration_s) as total_s 
       FROM activity_events 
@@ -127,7 +136,7 @@ export class SQLiteDatabase implements IDatabase {
       GROUP BY application
       ORDER BY total_s DESC
     `);
-    const rows = stmt.all(startOfDay) as Array<{ application: string; total_s: number }>;
+    const rows = stmt.all(startTime) as Array<{ application: string; total_s: number }>;
     return rows.map(r => ({
       app: r.application,
       durationMs: r.total_s * 1000
@@ -135,66 +144,83 @@ export class SQLiteDatabase implements IDatabase {
   }
 
   getDriftCountToday(): number {
-    const startOfDay = this.getStartOfDayMs();
+    const startTime = this.getStartTimeMs();
     const stmt = this.db.prepare(`
       SELECT COUNT(*) as count 
       FROM drift_events 
       WHERE timestamp_ms >= ?
     `);
-    const row = stmt.get(startOfDay) as { count: number };
+    const row = stmt.get(startTime) as { count: number };
     return row.count;
   }
 
   getSuccessfulReturnsToday(): number {
-    const startOfDay = this.getStartOfDayMs();
+    const startTime = this.getStartTimeMs();
     const stmt = this.db.prepare(`
       SELECT COUNT(*) as count 
       FROM recovery_events 
       WHERE timestamp_ms >= ? AND success = 1
     `);
-    const row = stmt.get(startOfDay) as { count: number };
+    const row = stmt.get(startTime) as { count: number };
     return row.count;
   }
 
   getFocusTimeToday(): number {
-    // Basic heuristic for focus time vs distraction time based on Mock database structure
-    // Since we don't store app categories in DB directly, we'll use a mocked calculation
-    // M3 handles AI context scoring, but for dashboard stats we need basic heuristics
-    const appUsage = this.getAppUsageToday();
-    let focusMs = 0;
-    
-    // Distraction list
-    const distractions = ['youtube', 'twitter', 'facebook', 'reddit', 'netflix'];
-    
-    for (const usage of appUsage) {
-      const appName = usage.app.toLowerCase();
-      if (!distractions.some(d => appName.includes(d))) {
-        focusMs += usage.durationMs;
-      }
-    }
-    
-    return focusMs;
+    const startTime = this.getStartTimeMs();
+    const stmt = this.db.prepare(`
+      SELECT SUM(duration_s) as total_s 
+      FROM activity_events 
+      WHERE timestamp_ms >= ? AND is_idle = 0
+      AND LOWER(application) NOT LIKE '%youtube%' 
+      AND LOWER(application) NOT LIKE '%twitter%' 
+      AND LOWER(application) NOT LIKE '%facebook%' 
+      AND LOWER(application) NOT LIKE '%reddit%' 
+      AND LOWER(application) NOT LIKE '%netflix%'
+      AND LOWER(COALESCE(window_title, '')) NOT LIKE '%youtube%'
+      AND LOWER(COALESCE(window_title, '')) NOT LIKE '%twitter%'
+      AND LOWER(COALESCE(window_title, '')) NOT LIKE '%facebook%'
+      AND LOWER(COALESCE(window_title, '')) NOT LIKE '%reddit%'
+      AND LOWER(COALESCE(window_title, '')) NOT LIKE '%netflix%'
+      AND LOWER(COALESCE(url, '')) NOT LIKE '%youtube.com%'
+      AND LOWER(COALESCE(url, '')) NOT LIKE '%twitter.com%'
+      AND LOWER(COALESCE(url, '')) NOT LIKE '%facebook.com%'
+      AND LOWER(COALESCE(url, '')) NOT LIKE '%reddit.com%'
+      AND LOWER(COALESCE(url, '')) NOT LIKE '%netflix.com%'
+    `);
+    const row = stmt.get(startTime) as { total_s: number | null };
+    return (row.total_s || 0) * 1000;
   }
 
   getDistractionTimeToday(): number {
-    const appUsage = this.getAppUsageToday();
-    let distractionMs = 0;
-    
-    const distractions = ['youtube', 'twitter', 'facebook', 'reddit', 'netflix'];
-    
-    for (const usage of appUsage) {
-      const appName = usage.app.toLowerCase();
-      if (distractions.some(d => appName.includes(d))) {
-        distractionMs += usage.durationMs;
-      }
-    }
-    
-    return distractionMs;
+    const startTime = this.getStartTimeMs();
+    const stmt = this.db.prepare(`
+      SELECT SUM(duration_s) as total_s 
+      FROM activity_events 
+      WHERE timestamp_ms >= ? AND is_idle = 0
+      AND (
+        LOWER(application) LIKE '%youtube%' OR LOWER(COALESCE(window_title, '')) LIKE '%youtube%' OR LOWER(COALESCE(url, '')) LIKE '%youtube.com%' OR
+        LOWER(application) LIKE '%twitter%' OR LOWER(COALESCE(window_title, '')) LIKE '%twitter%' OR LOWER(COALESCE(url, '')) LIKE '%twitter.com%' OR
+        LOWER(application) LIKE '%facebook%' OR LOWER(COALESCE(window_title, '')) LIKE '%facebook%' OR LOWER(COALESCE(url, '')) LIKE '%facebook.com%' OR
+        LOWER(application) LIKE '%reddit%' OR LOWER(COALESCE(window_title, '')) LIKE '%reddit%' OR LOWER(COALESCE(url, '')) LIKE '%reddit.com%' OR
+        LOWER(application) LIKE '%netflix%' OR LOWER(COALESCE(window_title, '')) LIKE '%netflix%' OR LOWER(COALESCE(url, '')) LIKE '%netflix.com%'
+      )
+    `);
+    const row = stmt.get(startTime) as { total_s: number | null };
+    return (row.total_s || 0) * 1000;
   }
 
   public getRecentActivity(limit: number = 50): ActivityEntry[] {
     const activities = this.db.prepare(`
-      SELECT id, timestamp_ms as timestamp, 'focus_start' as type, application || ' - ' || COALESCE(window_title, '') as description
+      SELECT id, timestamp_ms as timestamp, 
+             CASE 
+               WHEN LOWER(application) LIKE '%youtube%' OR LOWER(COALESCE(window_title, '')) LIKE '%youtube%' OR LOWER(COALESCE(url, '')) LIKE '%youtube.com%' THEN 'distraction'
+               WHEN LOWER(application) LIKE '%twitter%' OR LOWER(COALESCE(window_title, '')) LIKE '%twitter%' OR LOWER(COALESCE(url, '')) LIKE '%twitter.com%' THEN 'distraction'
+               WHEN LOWER(application) LIKE '%facebook%' OR LOWER(COALESCE(window_title, '')) LIKE '%facebook%' OR LOWER(COALESCE(url, '')) LIKE '%facebook.com%' THEN 'distraction'
+               WHEN LOWER(application) LIKE '%reddit%' OR LOWER(COALESCE(window_title, '')) LIKE '%reddit%' OR LOWER(COALESCE(url, '')) LIKE '%reddit.com%' THEN 'distraction'
+               WHEN LOWER(application) LIKE '%netflix%' OR LOWER(COALESCE(window_title, '')) LIKE '%netflix%' OR LOWER(COALESCE(url, '')) LIKE '%netflix.com%' THEN 'distraction'
+               ELSE 'focus_start'
+             END as type, 
+             application || ' - ' || COALESCE(window_title, '') as description
       FROM activity_events
       ORDER BY timestamp_ms DESC
       LIMIT ?
@@ -217,5 +243,16 @@ export class SQLiteDatabase implements IDatabase {
     const combined = [...activities, ...drifts, ...recoveries];
     combined.sort((a, b) => b.timestamp - a.timestamp);
     return combined.slice(0, limit);
+  }
+
+  public hasRecentBrowserActivity(timeWindowMs: number = 60000): boolean {
+    const cutoff = Date.now() - timeWindowMs;
+    const stmt = this.db.prepare(`
+      SELECT 1 FROM activity_events 
+      WHERE source = 'browser' AND timestamp_ms >= ?
+      LIMIT 1
+    `);
+    const row = stmt.get(cutoff);
+    return !!row;
   }
 }

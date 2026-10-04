@@ -62,9 +62,12 @@ export class ActivityServer {
       if (!description) {
         this.services.intentService.clearIntent();
         this.services.interventionService.reset();
+        this.services.db.setSessionStartMs(null);
         return res.json(null);
       }
-      res.json(this.services.intentService.setIntent(description));
+      const intent = this.services.intentService.setIntent(description);
+      this.services.db.setSessionStartMs(intent.createdAt);
+      res.json(intent);
     });
 
     this.app.get('/api/statistics', (req, res) => {
@@ -95,6 +98,11 @@ export class ActivityServer {
 
     this.app.get('/api/recent_activity', (req, res) => {
       res.json(this.services.db.getRecentActivity(50));
+    });
+
+    this.app.get('/api/browser_status', (req, res) => {
+      const isConnected = this.services.db.hasRecentBrowserActivity(60000);
+      res.json({ connected: isConnected });
     });
   }
 

@@ -45,8 +45,10 @@ export function useStatistics(): DailyStatistics {
 export function useReclaimScore(): ReclaimScore {
   const [score, setScore] = useState<ReclaimScore>({
     score: 100,
-    components: { focus: 100, recovery: 100, consistency: 100, intensity: 100 },
-    history: []
+    breakdown: { focusScore: 100, distractionPenalty: 0, driftPenalty: 0, recoveryBonus: 0 },
+    explanation: 'No data yet.',
+    timestamp: Date.now(),
+    date: new Date().toISOString().split('T')[0]!
   });
 
   useEffect(() => {
@@ -179,4 +181,27 @@ export function useRecentActivity(): ActivityEntry[] {
   }, []);
 
   return activity;
+}
+
+export function useBrowserStatus(): boolean {
+  const [connected, setConnected] = useState<boolean>(false);
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/browser_status`);
+        if (res.ok) {
+          const data = await res.json();
+          setConnected(data.connected);
+        }
+      } catch (err) {
+        console.error('Error fetching browser status', err);
+      }
+    };
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return connected;
 }

@@ -61,7 +61,7 @@ export function DashboardPage({ stats, score, intent, setIntent, clearIntent, ac
                 <div className={`intent-status ${intentClass}`}>
                   {intentIcon} {intentStatus}
                 </div>
-                <div className="intent-duration">Focus session · 42 min</div>
+                <div className="intent-duration">Focus session · {Math.floor((Date.now() - intent.createdAt) / 60000)} min</div>
               </div>
             </div>
             <div className="intent-actions">
@@ -150,6 +150,10 @@ export function DashboardPage({ stats, score, intent, setIntent, clearIntent, ac
                 iconClass = 'recovery';
                 iconChar = '↩';
                 subtitle = 'Successful return';
+              } else if (activity.type === 'distraction') {
+                iconClass = 'drift';
+                iconChar = '✕';
+                subtitle = 'Distraction';
               }
 
               // Try to parse app name out of description for a cleaner look

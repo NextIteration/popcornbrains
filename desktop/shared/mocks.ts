@@ -79,6 +79,7 @@ export class MockActivityLogger implements IActivityLogger {
 // ----- Database Mock (Member 3) -----
 
 export interface IDatabase {
+  setSessionStartMs(ms: number | null): void;
   getScreenTimeToday(): number;
   getAppUsageToday(): Array<{ app: string; durationMs: number }>;
   getDriftCountToday(): number;
@@ -88,6 +89,7 @@ export interface IDatabase {
 }
 
 export class MockDatabase implements IDatabase {
+  setSessionStartMs(ms: number | null): void {}
   getScreenTimeToday(): number {
     return 6 * 3600_000; // 6 hours
   }

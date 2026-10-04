@@ -1,4 +1,5 @@
 import React from 'react';
+import { useBrowserStatus } from '../hooks.js';
 
 interface SettingsPageProps {
   isTrackingPaused: boolean;
@@ -6,6 +7,8 @@ interface SettingsPageProps {
 }
 
 export function SettingsPage({ isTrackingPaused, setIsTrackingPaused }: SettingsPageProps) {
+  const isBrowserConnected = useBrowserStatus();
+
   return (
     <div className="page-container fade-in">
       <div style={{ maxWidth: '640px', margin: '0 auto' }}>
@@ -17,9 +20,18 @@ export function SettingsPage({ isTrackingPaused, setIsTrackingPaused }: Settings
             <div className="settings-row">
               <div>
                 <div className="settings-label">Browser tracking</div>
-                <div className="settings-desc">Allow extension to monitor URLs and titles</div>
+                <div className="settings-desc">
+                  {isBrowserConnected 
+                    ? 'Extension connected and monitoring URLs' 
+                    : 'Extension not detected. Please install and connect the Chrome extension.'}
+                </div>
               </div>
-              <div><span style={{ color: 'var(--accent-success)', fontWeight: 600 }}>ON</span></div>
+              <div>
+                {isBrowserConnected 
+                  ? <span style={{ color: 'var(--accent-success)', fontWeight: 600 }}>CONNECTED</span>
+                  : <span style={{ color: 'var(--accent-danger)', fontWeight: 600 }}>DISCONNECTED</span>
+                }
+              </div>
             </div>
             <div className="settings-row">
               <div>

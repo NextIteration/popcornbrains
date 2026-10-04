@@ -27,10 +27,11 @@ export type Page = 'dashboard' | 'focus' | 'activity' | 'settings';
 export function App() {
   const [currentPage, setCurrentPage] = useState<Page>('dashboard');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isTrackingPaused, setIsTrackingPaused] = useState(false);
 
   const stats = useStatistics();
   const score = useReclaimScore();
-  const intent = useCurrentIntent();
+  const { intent, setIntent, clearIntent } = useCurrentIntent();
   const { state: interventionState, respond, triggerMockDrift } = useInterventionState();
   const activities = useRecentActivity();
 
@@ -50,17 +51,19 @@ export function App() {
             stats={stats} 
             score={score} 
             intent={intent} 
+            setIntent={setIntent}
+            clearIntent={clearIntent}
             activities={activities}
             triggerMockDrift={triggerMockDrift}
             interventionState={interventionState}
           />
         );
       case 'focus':
-        return <FocusPage intent={intent} />;
+        return <FocusPage intent={intent} setIntent={setIntent} clearIntent={clearIntent} />;
       case 'activity':
         return <ActivityPage activities={activities} />;
       case 'settings':
-        return <SettingsPage />;
+        return <SettingsPage isTrackingPaused={isTrackingPaused} setIsTrackingPaused={setIsTrackingPaused} />;
       default:
         return null;
     }
@@ -91,8 +94,8 @@ export function App() {
           ))}
         </div>
         <div className="sidebar-footer">
-          <div className="status-dot"></div>
-          Tracking active
+          <div className={`status-dot ${isTrackingPaused ? 'paused' : (interventionState.isActive ? 'drifting' : '')}`} style={isTrackingPaused ? {background: 'var(--text-muted)'} : {}}></div>
+          {isTrackingPaused ? 'Tracking paused' : 'Tracking active'}
         </div>
       </nav>
 

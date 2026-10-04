@@ -55,8 +55,27 @@ export function useReclaimScore(): ReclaimScore {
   return useMemo(() => scoreService.calculateScore(), []);
 }
 
-export function useCurrentIntent(): UserIntent | null {
-  return useMemo(() => mockIntent.getCurrentIntent(), []);
+export function useCurrentIntent() {
+  const [intent, setIntentState] = useState<UserIntent | null>(mockIntent.getCurrentIntent());
+
+  const setIntent = useCallback((description: string) => {
+    const newIntent: UserIntent = {
+      id: `intent-${Date.now()}`,
+      description,
+      createdAt: Date.now(),
+      applicationHints: []
+    };
+    mockIntent.setIntent(newIntent);
+    setIntentState(newIntent);
+  }, []);
+
+  const clearIntent = useCallback(() => {
+    mockIntent.setIntent(null);
+    setIntentState(null);
+    interventionService.reset();
+  }, []);
+
+  return { intent, setIntent, clearIntent };
 }
 
 export function useInterventionState() {

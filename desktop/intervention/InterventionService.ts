@@ -132,7 +132,7 @@ export class InterventionService {
     };
 
     // Reset state after response
-    if (action === 'dismiss' || action === 'return') {
+    if (action === 'dismiss' || action === 'return' || action === 'continue') {
       this.state = {
         ...this.state,
         isActive: false,

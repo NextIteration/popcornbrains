@@ -1,6 +1,11 @@
 import React from 'react';
 
-export function SettingsPage() {
+interface SettingsPageProps {
+  isTrackingPaused: boolean;
+  setIsTrackingPaused: (paused: boolean) => void;
+}
+
+export function SettingsPage({ isTrackingPaused, setIsTrackingPaused }: SettingsPageProps) {
   return (
     <div className="page-container fade-in">
       <div style={{ maxWidth: '640px', margin: '0 auto' }}>
@@ -56,8 +61,13 @@ export function SettingsPage() {
             </div>
             
             <div className="settings-row" style={{ borderTop: '1px solid var(--border-color)', paddingTop: 'var(--space-md)', paddingBottom: 0, borderBottom: 'none' }}>
-              <div className="settings-label">Pause all tracking</div>
-              <button className="btn btn-secondary">Pause</button>
+              <div className="settings-label">{isTrackingPaused ? 'Resume tracking' : 'Pause all tracking'}</div>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setIsTrackingPaused(!isTrackingPaused)}
+              >
+                {isTrackingPaused ? 'Resume' : 'Pause'}
+              </button>
             </div>
           </div>
         </div>

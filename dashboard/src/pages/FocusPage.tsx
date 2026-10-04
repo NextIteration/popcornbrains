@@ -3,10 +3,13 @@ import type { UserIntent } from '../../../desktop/shared/types.js';
 
 interface FocusPageProps {
   intent: UserIntent | null;
+  setIntent: (description: string) => void;
+  clearIntent: () => void;
 }
 
-export function FocusPage({ intent }: FocusPageProps) {
+export function FocusPage({ intent, setIntent, clearIntent }: FocusPageProps) {
   const [elapsed, setElapsed] = useState(0);
+  const [draftGoal, setDraftGoal] = useState('');
 
   // Simple timer for visual effect
   useEffect(() => {
@@ -35,6 +38,8 @@ export function FocusPage({ intent }: FocusPageProps) {
         <h2 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 600, marginBottom: 'var(--space-md)' }}>What do you want to focus on?</h2>
         <input 
           type="text" 
+          value={draftGoal}
+          onChange={e => setDraftGoal(e.target.value)}
           placeholder="Enter your current goal..." 
           style={{ 
             padding: 'var(--space-md) var(--space-lg)', 
@@ -45,8 +50,25 @@ export function FocusPage({ intent }: FocusPageProps) {
             fontSize: 'var(--font-size-base)',
             marginBottom: 'var(--space-lg)'
           }} 
+          onKeyDown={e => {
+            if (e.key === 'Enter' && draftGoal.trim()) {
+              setIntent(draftGoal.trim());
+              setDraftGoal('');
+            }
+          }}
         />
-        <button className="btn btn-primary" style={{ padding: 'var(--space-md) var(--space-xl)' }}>Start Focus</button>
+        <button 
+          className="btn btn-primary" 
+          style={{ padding: 'var(--space-md) var(--space-xl)' }}
+          onClick={() => {
+            if (draftGoal.trim()) {
+              setIntent(draftGoal.trim());
+              setDraftGoal('');
+            }
+          }}
+        >
+          Start Focus
+        </button>
       </div>
     );
   }
@@ -72,8 +94,11 @@ export function FocusPage({ intent }: FocusPageProps) {
       </div>
       
       <div style={{ display: 'flex', gap: 'var(--space-md)' }}>
-        <button className="btn btn-secondary">End Focus</button>
-        <button className="btn btn-secondary">Change Goal</button>
+        <button className="btn btn-secondary" onClick={clearIntent}>End Focus</button>
+        <button className="btn btn-secondary" onClick={() => {
+          const goal = window.prompt('Enter your new goal:', intent.description);
+          if (goal && goal.trim()) setIntent(goal.trim());
+        }}>Change Goal</button>
       </div>
     </div>
   );

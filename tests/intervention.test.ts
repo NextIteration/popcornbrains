@@ -130,8 +130,8 @@ describe('InterventionService', () => {
 
     expect(result).not.toBeNull();
     expect(result!.userAction).toBe('continue');
-    // Continue keeps state active
-    expect(service.getState().isActive).toBe(true);
+    // Continue now closes the UI, so isActive becomes false
+    expect(service.getState().isActive).toBe(false);
   });
 
   it('responds to intervention with dismiss', () => {

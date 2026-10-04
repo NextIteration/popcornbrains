@@ -11,6 +11,8 @@ interface DashboardPageProps {
   stats: DailyStatistics;
   score: ReclaimScore;
   intent: UserIntent | null;
+  setIntent: (description: string) => void;
+  clearIntent: () => void;
   activities: ActivityEntry[];
   triggerMockDrift: () => void;
   interventionState: InterventionState;
@@ -28,12 +30,22 @@ function formatTimeOnly(ts: number): string {
   return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-export function DashboardPage({ stats, score, intent, activities, triggerMockDrift, interventionState }: DashboardPageProps) {
+export function DashboardPage({ stats, score, intent, setIntent, clearIntent, activities, triggerMockDrift, interventionState }: DashboardPageProps) {
   
   const isDrifting = interventionState.isActive;
   const intentClass = isDrifting ? 'drifting' : 'on-track';
   const intentStatus = isDrifting ? 'Attention Drifting' : 'On Track';
   const intentIcon = isDrifting ? '⚠️' : '●';
+
+  const handleStartFocus = () => {
+    const goal = window.prompt('What do you want to focus on?');
+    if (goal && goal.trim()) setIntent(goal.trim());
+  };
+
+  const handleChangeGoal = () => {
+    const goal = window.prompt('Enter your new goal:', intent?.description || '');
+    if (goal && goal.trim()) setIntent(goal.trim());
+  };
 
   return (
     <div className="page-container fade-in">
@@ -53,8 +65,8 @@ export function DashboardPage({ stats, score, intent, activities, triggerMockDri
               </div>
             </div>
             <div className="intent-actions">
-              <button className="btn btn-secondary">End Focus</button>
-              <button className="btn btn-secondary">Change Goal</button>
+              <button className="btn btn-secondary" onClick={clearIntent}>End Focus</button>
+              <button className="btn btn-secondary" onClick={handleChangeGoal}>Change Goal</button>
             </div>
           </div>
         ) : (
@@ -64,7 +76,7 @@ export function DashboardPage({ stats, score, intent, activities, triggerMockDri
               <div className="intent-value" style={{ color: 'var(--text-muted)' }}>What do you want to focus on?</div>
             </div>
             <div className="intent-actions">
-              <button className="btn btn-primary">Start Focus</button>
+              <button className="btn btn-primary" onClick={handleStartFocus}>Start Focus</button>
             </div>
           </div>
         )}

@@ -154,11 +154,11 @@ export interface ActivityMetadata {
 export interface ActivityEvent {
   id: string;
   timestamp: string; // ISO string
-  source: 'browser';
-  application: 'Chrome';
+  source: 'browser' | 'desktop';
+  application: string;
   window_title: string;
   url: string;
   duration: number;
   is_idle: boolean;
-  metadata: ActivityMetadata;
+  metadata: ActivityMetadata | Record<string, unknown>;
 }

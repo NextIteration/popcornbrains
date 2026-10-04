@@ -1,121 +1,182 @@
 /**
- * Dashboard hooks — wire up Member 4 services for React components.
- * Uses mock data by default; services are instantiated once.
+ * Dashboard hooks — wired up to the Node.js Express backend.
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { MockDatabase, MockIntentService, MockTrackingService, MockActivityLogger } from '../../desktop/shared/mocks.js';
-import { StatisticsService } from '../../desktop/statistics/StatisticsService.js';
-import { ReclaimScoreService } from '../../desktop/score/ReclaimScoreService.js';
-import { InterventionService } from '../../desktop/intervention/InterventionService.js';
-import { RecoveryService } from '../../desktop/recovery/RecoveryService.js';
+import { useState, useEffect, useCallback } from 'react';
 import type {
   DailyStatistics,
   ReclaimScore,
   InterventionState,
   InterventionAction,
   ActivityEntry,
-  DriftEvent,
   UserIntent,
 } from '../../desktop/shared/types.js';
 
-// Singleton service instances (mock-backed)
-const mockDb = new MockDatabase();
-const mockIntent = new MockIntentService();
-const mockTracking = new MockTrackingService();
-const mockActivity = new MockActivityLogger();
-
-const statsService = new StatisticsService(mockDb);
-const scoreService = new ReclaimScoreService(statsService);
-const interventionService = new InterventionService();
-const recoveryService = new RecoveryService(mockTracking);
-
-// Seed some mock activity
-const mockActivities: ActivityEntry[] = [
-  { id: 'a1', type: 'focus_start', timestamp: Date.now() - 3600_000, description: 'Started focused work on TypeScript project' },
-  { id: 'a2', type: 'drift', timestamp: Date.now() - 2400_000, description: 'Opened YouTube — possible drift' },
-  { id: 'a3', type: 'intervention', timestamp: Date.now() - 2350_000, description: 'Gentle reminder shown' },
-  { id: 'a4', type: 'recovery', timestamp: Date.now() - 2300_000, description: 'Returned to VS Code successfully' },
-  { id: 'a5', type: 'drift', timestamp: Date.now() - 1200_000, description: 'Switched to Twitter' },
-  { id: 'a6', type: 'intervention', timestamp: Date.now() - 1150_000, description: 'Mismatch explanation shown' },
-  { id: 'a7', type: 'recovery', timestamp: Date.now() - 1100_000, description: 'Returned to task' },
-  { id: 'a8', type: 'focus_end', timestamp: Date.now() - 600_000, description: 'Focus session ended (45 min)' },
-  { id: 'a9', type: 'focus_start', timestamp: Date.now() - 300_000, description: 'New focus session started' },
-];
-
-mockActivities.forEach(a => mockActivity.log(a));
-
-// ----- Hooks -----
+const API_BASE = 'http://localhost:3000/api';
 
 export function useStatistics(): DailyStatistics {
-  return useMemo(() => statsService.getDailyStatistics(), []);
+  const [stats, setStats] = useState<DailyStatistics>({
+    date: new Date().toISOString().split('T')[0],
+    screenTime: { totalMs: 0, activeMs: 0, date: '' },
+    appUsage: [],
+    focusTime: { totalFocusMs: 0, totalDistractionMs: 0, focusPercentage: 0, longestFocusStreakMs: 0 },
+    driftStats: { totalDrifts: 0, successfulReturns: 0, returnRate: 0 }
+  });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/statistics`);
+        if (res.ok) {
+          setStats(await res.json());
+        }
+      } catch (err) {
+        console.error('Error fetching statistics', err);
+      }
+    };
+    fetchStats();
+    const interval = setInterval(fetchStats, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return stats;
 }
 
 export function useReclaimScore(): ReclaimScore {
-  return useMemo(() => scoreService.calculateScore(), []);
+  const [score, setScore] = useState<ReclaimScore>({
+    score: 100,
+    components: { focus: 100, recovery: 100, consistency: 100, intensity: 100 },
+    history: []
+  });
+
+  useEffect(() => {
+    const fetchScore = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/score`);
+        if (res.ok) {
+          setScore(await res.json());
+        }
+      } catch (err) {
+        console.error('Error fetching score', err);
+      }
+    };
+    fetchScore();
+    const interval = setInterval(fetchScore, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return score;
 }
 
 export function useCurrentIntent() {
-  const [intent, setIntentState] = useState<UserIntent | null>(mockIntent.getCurrentIntent());
+  const [intent, setIntentState] = useState<UserIntent | null>(null);
 
-  const setIntent = useCallback((description: string) => {
-    const newIntent: UserIntent = {
-      id: `intent-${Date.now()}`,
-      description,
-      createdAt: Date.now(),
-      applicationHints: []
-    };
-    mockIntent.setIntent(newIntent);
-    setIntentState(newIntent);
+  useEffect(() => {
+    fetch(`${API_BASE}/intent`)
+      .then(res => res.json())
+      .then(data => setIntentState(data))
+      .catch(console.error);
   }, []);
 
-  const clearIntent = useCallback(() => {
-    mockIntent.setIntent(null);
-    setIntentState(null);
-    interventionService.reset();
+  const setIntent = useCallback(async (description: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/intent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description })
+      });
+      if (res.ok) {
+        setIntentState(await res.json());
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  const clearIntent = useCallback(async () => {
+    try {
+      await fetch(`${API_BASE}/intent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: '' })
+      });
+      setIntentState(null);
+    } catch (err) {
+      console.error(err);
+    }
   }, []);
 
   return { intent, setIntent, clearIntent };
 }
 
 export function useInterventionState() {
-  const [state, setState] = useState<InterventionState>(interventionService.getState());
+  const [state, setState] = useState<InterventionState>({
+    isActive: false,
+    currentLevel: null,
+    currentDriftEvent: null,
+    lastInterventionTime: null,
+    interventionCount: 0
+  });
 
-  const respond = useCallback((action: InterventionAction) => {
-    const result = interventionService.respondToIntervention(action);
-    setState(interventionService.getState());
-
-    if (action === 'return') {
-      const intent = mockIntent.getCurrentIntent();
-      if (intent) {
-        recoveryService.returnToTask(intent);
+  useEffect(() => {
+    const fetchState = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/intervention`);
+        if (res.ok) {
+          setState(await res.json());
+        }
+      } catch (err) {
+        console.error(err);
       }
-    }
+    };
+    fetchState();
+    const interval = setInterval(fetchState, 2000); // Check often for interventions
+    return () => clearInterval(interval);
+  }, []);
 
-    return result;
+  const respond = useCallback(async (action: InterventionAction) => {
+    try {
+      const res = await fetch(`${API_BASE}/intervention/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action })
+      });
+      if (res.ok) {
+        // optimistically fetch new state
+        fetch(`${API_BASE}/intervention`).then(r => r.json()).then(setState);
+      }
+    } catch (err) {
+      console.error(err);
+    }
   }, []);
 
   const triggerMockDrift = useCallback(() => {
-    const intent = mockIntent.getCurrentIntent();
-    if (!intent) return;
-
-    const driftEvent: DriftEvent = {
-      id: `drift-${Date.now()}`,
-      timestamp: Date.now(),
-      currentApp: 'YouTube',
-      currentTitle: 'Funny Cat Videos',
-      expectedIntent: intent,
-      driftScore: 0.85,
-      durationMs: 180_000,
-    };
-
-    interventionService.handleDriftEvent(driftEvent);
-    setState(interventionService.getState());
+    // In the real system, you'd probably test this differently, but we can hit an endpoint if we added one,
+    // or just leave it unimplemented since drift is now real.
+    console.warn("triggerMockDrift is deprecated in live mode");
   }, []);
 
   return { state, respond, triggerMockDrift };
 }
 
 export function useRecentActivity(): ActivityEntry[] {
-  return useMemo(() => mockActivity.getRecent(15), []);
+  const [activity, setActivity] = useState<ActivityEntry[]>([]);
+
+  useEffect(() => {
+    const fetchActivity = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/recent_activity`);
+        if (res.ok) {
+          setActivity(await res.json());
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchActivity();
+    const interval = setInterval(fetchActivity, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return activity;
 }

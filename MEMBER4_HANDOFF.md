@@ -1,173 +1,66 @@
 # Member 4 Handoff
 
 ## Current Status
-✅ **COMPLETE** — All services, dashboard, and tests are implemented and passing.
+✅ **COMPLETE** — Member 4 foundation is implemented. Dashboard UI has been redesigned and polished.
+Current validation status: Build succeeds, TypeScript checks pass, and all tests pass.
 
-## Current Task
-None — all planned tasks are complete.
+## UI Implementation
+The dashboard has been redesigned into a professional, polished desktop productivity application featuring:
+- **Desktop App Shell**: Added a consistent layout with a Sidebar navigation, TopBar (with tracking status), and main PageContent area.
+- **Pages Structure**: Divided the experience into logical sections: `DashboardPage`, `FocusPage`, `ActivityPage`, and `SettingsPage`.
+- **Current Intent**: A dominant, clear card on the dashboard focusing purely on the user's current goal and progress.
+- **Statistics & Score**: A cleaner, minimal presentation of the Reclaim Score and usage metrics, avoiding visually overwhelming elements.
+- **Intervention UI**: Redesigned as a polished, escalating desktop-style modal rather than a full-screen takeover or simple inline banner.
+- **Visual Design System**: Calm, light-neutral theme using glassmorphism, subtle shadows, and a reserved color palette (navy for focus, muted green for on-track, amber for drift, red for interventions).
+- **Responsive Behavior**: Gracefully adapts grid structures and layouts for standard desktop resolutions (1280x720 up to 1920x1080).
 
-## Completed
-1. ✅ Project foundation (tsconfig.json, vite.config.ts, vitest.config.ts)
-2. ✅ Shared types (`desktop/shared/types.ts`) — all interfaces for DriftEvent, Intervention, Recovery, Statistics, ReclaimScore, Activity
-3. ✅ Mock dependencies (`desktop/shared/mocks.ts`) — IIntentService, ITrackingService, IActivityLogger, IDatabase
-4. ✅ InterventionService (`desktop/intervention/InterventionService.ts`) — 3-level escalation, anti-spam, handler callback
-5. ✅ RecoveryService (`desktop/recovery/RecoveryService.ts`) — mock window restore, intent resolution
-6. ✅ StatisticsService (`desktop/statistics/StatisticsService.ts`) — all 6 required methods + daily bundle
-7. ✅ ReclaimScoreService (`desktop/score/ReclaimScoreService.ts`) — deterministic, explainable formula
-8. ✅ Dashboard UI (React) — ScoreCard, MetricCard, AppUsageCard, ActivityFeed, InterventionBanner, IntentBanner
-9. ✅ Tests — 50 tests across 5 files, all passing
-10. ✅ TypeScript check passes (zero errors)
-11. ✅ Vite production build passes
+## Existing Functionality
+The core business logic and services were preserved entirely:
+- **InterventionService**: 3-level escalation, Continue/Dismiss/Return actions, and anti-spam handling.
+- **RecoveryService**: Return-to-task flow with mock window restore functionality.
+- **StatisticsService**: Data getters for metrics and the daily statistics bundle.
+- **ReclaimScoreService**: Deterministic, explainable formula calculation.
+- **Mock/Demo Flow**: The simulated drift functionality and existing mock data services remain intact for hackathon demonstrations.
+- **Tests**: All 50 existing tests pass without modification.
 
-## In Progress
-Nothing.
+## Integration Readiness
+M4 is waiting for real services from other members:
 
-## Next Steps
-- Wire up real IDatabase when Member 3 delivers SQLite schema
-- Wire up real IIntentService when Member 1/2 delivers intent system
-- Wire up real ITrackingService when Member 2 delivers tracking
-- Replace mock window restoration with Electron BrowserWindow APIs
-- Add IPC bridge between Electron main process and dashboard renderer
-- Add Electron notification integration for interventions (BrowserWindow overlay or system tray)
-- Add persistence for intervention history
-- Add date range selection to dashboard (currently today-only)
+**M1**:
+- Desktop tracking
+- Intent system
+- SQLite/database
+- Core desktop services
 
-## Important Decisions
-- **Anti-spam**: 30s cooldown + max 5 interventions per 5-minute window (configurable)
-- **Escalation**: Level 1 default, Level 2 for driftScore > 0.8, Level 3 after autoEscalateMs (2 min)
-- **Score formula**: `focusScore - distractionPenalty - driftPenalty + recoveryBonus`, clamped [0, 100]
-  - focusScore = (focusMs / totalActiveMs) * 100
-  - distractionPenalty = min(distractionMs / 2h, 1) * 30
-  - driftPenalty = min(driftCount / 10, 1) * 20
-  - recoveryBonus = returnRate * 15
-- **Recovery**: Does NOT close user's current apps — only brings target to foreground
-- **Idle time**: Conceptually excluded from all stats (mock data represents active time only)
-- **CSS approach**: Vanilla CSS with CSS custom properties, glassmorphism dark theme
-- **No new npm dependencies added** — all code uses existing react, vitest, vite stack
-- **TypeScript 7**: Removed `baseUrl` from tsconfig (deprecated in TS 7), use relative paths
+**M2**:
+- Browser extension
+- Browser activity
 
-## Interfaces
+**M3**:
+- Intelligence/relevance
+- Drift detection
 
-### IDatabase (consumed from Member 3)
-```typescript
-interface IDatabase {
-  getScreenTimeToday(): number;
-  getAppUsageToday(): Array<{ app: string; durationMs: number }>;
-  getDriftCountToday(): number;
-  getSuccessfulReturnsToday(): number;
-  getFocusTimeToday(): number;
-  getDistractionTimeToday(): number;
-}
-```
+**M4** owns only the intervention, recovery, statistics presentation, reclaim score, and dashboard UI.
 
-### IIntentService (consumed from Member 1/2)
-```typescript
-interface IIntentService {
-  getCurrentIntent(): UserIntent | null;
-}
-```
+## Pending Integration
+- Replace mock activity/tracking data with M1 services.
+- Connect real intent data from M1.
+- Connect real `DriftEvents` from M3.
+- Connect browser activity from M2.
+- Connect SQLite-backed statistics.
+- Connect real Windows app focusing for `RecoveryService`.
+- Connect real browser tab Return-to-Task.
+- Validate the complete end-to-end intervention flow.
 
-### ITrackingService (consumed from Member 2)
-```typescript
-interface ITrackingService {
-  getCurrentApp(): { name: string; title: string };
-}
-```
+## Validation
+- `npm run build` — ✅ Passed
+- `npx tsc --noEmit` — ✅ Passed
+- `npm run test` (vitest) — ✅ Passed (50/50 tests)
 
-### DriftEvent (consumed from drift detection member)
-```typescript
-interface DriftEvent {
-  id: string;
-  timestamp: number;
-  currentApp: string;
-  currentTitle: string;
-  expectedIntent: UserIntent;
-  driftScore: number;       // 0-1
-  durationMs: number;
-}
-```
-
-## Mock Dependencies
-All in `desktop/shared/mocks.ts`:
-- `MockDatabase` — returns hardcoded realistic data
-- `MockIntentService` — returns "Working on TypeScript project"
-- `MockTrackingService` — returns vscode as current app
-- `MockActivityLogger` — in-memory activity list
-
-## Commands
-```bash
-# Run tests
-npx vitest run
-
-# Type check
-npx tsc --noEmit
-
-# Dev server (dashboard)
-npx vite dev
-
-# Production build
-npx vite build
-```
-
-Note: On Windows with restricted execution policy, prefix with:
-```bash
-powershell -ExecutionPolicy Bypass -Command "..."
-```
-
-## Tests
-| File | Tests | Status |
-|------|-------|--------|
-| tests/intervention.test.ts | 14 | ✅ Pass |
-| tests/recovery.test.ts | 7 | ✅ Pass |
-| tests/statistics.test.ts | 8 | ✅ Pass |
-| tests/score.test.ts | 11 | ✅ Pass |
-| tests/mocks.test.ts | 10 | ✅ Pass |
-| **Total** | **50** | **✅ All Pass** |
-
-## Known Issues
-- None currently. All tests pass, TS compiles clean, build succeeds.
-
-## Files Created/Modified
-
-### Created
-| File | Purpose |
-|------|---------|
-| `tsconfig.json` | TypeScript configuration |
-| `vite.config.ts` | Vite build config (dashboard root) |
-| `vitest.config.ts` | Test runner config |
-| `desktop/shared/types.ts` | All shared type definitions |
-| `desktop/shared/mocks.ts` | Mock implementations for other members' services |
-| `desktop/intervention/InterventionService.ts` | 3-level intervention with anti-spam |
-| `desktop/recovery/RecoveryService.ts` | Task return with mock window restore |
-| `desktop/statistics/StatisticsService.ts` | All stats methods |
-| `desktop/score/ReclaimScoreService.ts` | Deterministic explainable score |
-| `dashboard/index.html` | Dashboard HTML entry |
-| `dashboard/src/main.tsx` | React entry point |
-| `dashboard/src/index.css` | Full dashboard styling |
-| `dashboard/src/App.tsx` | Main dashboard component |
-| `dashboard/src/hooks.ts` | React hooks wiring services |
-| `dashboard/src/vite-env.d.ts` | CSS module type declarations |
-| `dashboard/src/components/ScoreCard.tsx` | Score ring + breakdown |
-| `dashboard/src/components/MetricCard.tsx` | Reusable metric card |
-| `dashboard/src/components/AppUsageCard.tsx` | App usage bar chart |
-| `dashboard/src/components/ActivityFeed.tsx` | Recent activity list |
-| `dashboard/src/components/InterventionBanner.tsx` | Intervention UI with actions |
-| `dashboard/src/components/IntentBanner.tsx` | Current intent display |
-| `tests/intervention.test.ts` | InterventionService tests |
-| `tests/recovery.test.ts` | RecoveryService tests |
-| `tests/statistics.test.ts` | StatisticsService tests |
-| `tests/score.test.ts` | ReclaimScoreService tests |
-| `tests/mocks.test.ts` | Mock services tests |
-
-### Modified
-None (all existing files untouched).
-
-## Last Completed Action
-Created MEMBER4_HANDOFF.md with full project status.
-
-## Continuation Instructions
-1. All Member 4 work is complete per the specification.
-2. To integrate with real services, replace the `Mock*` classes in `desktop/shared/mocks.ts` with real implementations that satisfy the same interfaces.
-3. The dashboard hooks in `dashboard/src/hooks.ts` instantiate the mock services — swap them for real ones when available.
-4. No changes needed to the service classes or dashboard components; they depend only on interfaces.
-5. For Electron integration, the InterventionService's `setInterventionHandler` callback should trigger a BrowserWindow overlay or system notification.
+## Important Integration Rules
+- M4 consumes shared contracts/services.
+- M4 does **not** duplicate tracking.
+- M4 does **not** implement drift detection.
+- M4 does **not** implement AI relevance.
+- M4 does **not** own the database schema.
+- M4 does **not** replace other members' implementations.

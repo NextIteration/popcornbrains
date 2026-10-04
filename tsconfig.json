@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": ".",
+    "paths": {
+      "@desktop/*": ["./desktop/*"],
+      "@dashboard/*": ["./dashboard/*"],
+      "@shared/*": ["./desktop/shared/*"]
+    }
+  },
+  "include": [
+    "desktop/**/*.ts",
+    "desktop/**/*.tsx",
+    "dashboard/**/*.ts",
+    "dashboard/**/*.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "vite.config.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

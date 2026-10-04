@@ -141,3 +141,24 @@ export interface ActivityEntry {
   description: string;
   metadata?: Record<string, unknown>;
 }
+
+// ----- Browser Extension Activity -----
+
+export interface ActivityMetadata {
+  title?: string;
+  description?: string;
+  ogTitle?: string;
+  ogDescription?: string;
+}
+
+export interface ActivityEvent {
+  id: string;
+  timestamp: string; // ISO string
+  source: 'browser';
+  application: 'Chrome';
+  window_title: string;
+  url: string;
+  duration: number;
+  is_idle: boolean;
+  metadata: ActivityMetadata;
+}

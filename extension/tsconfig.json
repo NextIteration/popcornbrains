@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "paths": {
+      "@shared/*": ["../desktop/shared/*"]
+    },
+    "types": ["chrome", "vitest/globals", "node"]
+  },
+  "include": ["src", "tests"]
+}

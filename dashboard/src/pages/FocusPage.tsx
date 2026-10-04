@@ -1,29 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import type { UserIntent } from '../../../desktop/shared/types.js';
 
+import { globalTimer } from '../utils/timer.js';
+
 interface FocusPageProps {
   intent: UserIntent | null;
   setIntent: (description: string) => void;
   clearIntent: () => void;
+  isTrackingPaused: boolean;
+  setIsTrackingPaused: (paused: boolean) => void;
 }
 
-export function FocusPage({ intent, setIntent, clearIntent }: FocusPageProps) {
+export function FocusPage({ intent, setIntent, clearIntent, isTrackingPaused, setIsTrackingPaused }: FocusPageProps) {
   const [elapsed, setElapsed] = useState(0);
   const [draftGoal, setDraftGoal] = useState('');
 
   // Simple timer for visual effect
   useEffect(() => {
-    if (!intent) return;
-    const start = intent.createdAt;
-    
     const update = () => {
-      setElapsed(Date.now() - start);
+      setElapsed(globalTimer.getElapsed(intent, isTrackingPaused, Date.now()));
     };
     
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [intent]);
+  }, [intent, isTrackingPaused]);
 
   const formatElapsed = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -94,6 +95,9 @@ export function FocusPage({ intent, setIntent, clearIntent }: FocusPageProps) {
       </div>
       
       <div style={{ display: 'flex', gap: 'var(--space-md)' }}>
+        <button className="btn btn-secondary" onClick={() => setIsTrackingPaused(!isTrackingPaused)}>
+          {isTrackingPaused ? 'Resume' : 'Pause'}
+        </button>
         <button className="btn btn-secondary" onClick={clearIntent}>End Focus</button>
         <button className="btn btn-secondary" onClick={() => {
           const goal = window.prompt('Enter your new goal:', intent.description);

@@ -59,7 +59,7 @@ export function App() {
           />
         );
       case 'focus':
-        return <FocusPage intent={intent} setIntent={setIntent} clearIntent={clearIntent} />;
+        return <FocusPage intent={intent} setIntent={setIntent} clearIntent={clearIntent} isTrackingPaused={isTrackingPaused} setIsTrackingPaused={setIsTrackingPaused} />;
       case 'activity':
         return <ActivityPage activities={activities} />;
       case 'settings':

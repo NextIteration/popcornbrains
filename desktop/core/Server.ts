@@ -94,10 +94,7 @@ export class ActivityServer {
     });
 
     this.app.get('/api/recent_activity', (req, res) => {
-      // For now just return empty array or we could query db for recent events
-      // The MockActivityLogger tracked this, we can just return empty array for now
-      // since the Dashboard Activity tab expects ActivityEntry[]
-      res.json([]);
+      res.json(this.services.db.getRecentActivity(50));
     });
   }
 

@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import type { IDatabase } from '../shared/mocks.js';
-import type { ActivityEvent, DriftEvent } from '../shared/types.js';
+import type { ActivityEvent, DriftEvent, ActivityEntry } from '../shared/types.js';
 
 export class SQLiteDatabase implements IDatabase {
   private db: Database.Database;
@@ -190,5 +190,32 @@ export class SQLiteDatabase implements IDatabase {
     }
     
     return distractionMs;
+  }
+
+  public getRecentActivity(limit: number = 50): ActivityEntry[] {
+    const activities = this.db.prepare(`
+      SELECT id, timestamp_ms as timestamp, 'focus_start' as type, application || ' - ' || COALESCE(window_title, '') as description
+      FROM activity_events
+      ORDER BY timestamp_ms DESC
+      LIMIT ?
+    `).all(limit) as any[];
+
+    const drifts = this.db.prepare(`
+      SELECT id, timestamp_ms as timestamp, 'drift' as type, 'Drifted to ' || current_app as description
+      FROM drift_events
+      ORDER BY timestamp_ms DESC
+      LIMIT ?
+    `).all(limit) as any[];
+
+    const recoveries = this.db.prepare(`
+      SELECT id, timestamp_ms as timestamp, 'recovery' as type, 'Returned to focus' as description
+      FROM recovery_events
+      ORDER BY timestamp_ms DESC
+      LIMIT ?
+    `).all(limit) as any[];
+
+    const combined = [...activities, ...drifts, ...recoveries];
+    combined.sort((a, b) => b.timestamp - a.timestamp);
+    return combined.slice(0, limit);
   }
 }

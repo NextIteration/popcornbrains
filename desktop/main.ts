@@ -7,7 +7,11 @@ import type { ServerServices } from './core/Server.js';
 import { ContextAnalyzer } from './intelligence/ContextAnalyzer.js';
 import { ActivityAnalyzer } from './intelligence/ActivityAnalyzer.js';
 import { DriftDetector } from './intelligence/DriftDetector.js';
-import { MockRelevanceAnalyzer } from './intelligence/RelevanceAnalyzer.js';
+import {
+  MockRelevanceAnalyzer,
+  GeminiRelevanceAnalyzer,
+  OpenAIRelevanceAnalyzer,
+} from './intelligence/RelevanceAnalyzer.js';
 import type { ActivityEvent as IntelligenceActivityEvent } from './intelligence/types.js';
 
 // M4
@@ -19,6 +23,9 @@ import { MockTrackingService } from './shared/mocks.js';
 
 import type { ActivityEvent } from './shared/types.js';
 import path from 'path';
+import dotenv from 'dotenv';
+
+dotenv.config({ override: true });
 
 // --- Dependency Injection Setup ---
 
@@ -49,7 +56,11 @@ const activityService = new ActivityService(services);
 
 // --- M3 Intelligence Pipeline Wiring ---
 
-const relevanceAnalyzer = new MockRelevanceAnalyzer();
+const relevanceAnalyzer = process.env.GEMINI_API_KEY
+  ? new GeminiRelevanceAnalyzer()
+  : process.env.OPENAI_API_KEY
+    ? new OpenAIRelevanceAnalyzer()
+    : new MockRelevanceAnalyzer();
 const contextAnalyzer = new ContextAnalyzer();
 const activityAnalyzer = new ActivityAnalyzer(relevanceAnalyzer, contextAnalyzer);
 const driftDetector = new DriftDetector(60_000); // 60s persistence threshold
@@ -79,6 +90,7 @@ activityService.onActivity(async (event: ActivityEvent) => {
 
   const intelligenceEvent = toIntelligenceEvent(event);
   const assessment = await activityAnalyzer.assessActivity(intelligenceEvent, currentIntent);
+  db.updateActivityRelevance(event.id, assessment.relevance);
   const driftEvent = driftDetector.update(assessment);
 
   if (driftEvent) {

@@ -51,6 +51,12 @@ export class SQLiteDatabase implements IDatabase {
         success INTEGER NOT NULL
       );
     `);
+    
+    try {
+      this.db.exec(`ALTER TABLE activity_events ADD COLUMN relevance TEXT;`);
+    } catch (e) {
+      // Column might already exist
+    }
   }
 
   public logActivity(event: ActivityEvent) {
@@ -70,6 +76,13 @@ export class SQLiteDatabase implements IDatabase {
       event.is_idle ? 1 : 0,
       JSON.stringify(event.metadata)
     );
+  }
+
+  public updateActivityRelevance(id: string, relevance: string) {
+    const stmt = this.db.prepare(`
+      UPDATE activity_events SET relevance = ? WHERE id = ?
+    `);
+    stmt.run(relevance, id);
   }
 
   public logDrift(event: DriftEvent) {
@@ -171,21 +184,7 @@ export class SQLiteDatabase implements IDatabase {
       SELECT SUM(duration_s) as total_s 
       FROM activity_events 
       WHERE timestamp_ms >= ? AND is_idle = 0
-      AND LOWER(application) NOT LIKE '%youtube%' 
-      AND LOWER(application) NOT LIKE '%twitter%' 
-      AND LOWER(application) NOT LIKE '%facebook%' 
-      AND LOWER(application) NOT LIKE '%reddit%' 
-      AND LOWER(application) NOT LIKE '%netflix%'
-      AND LOWER(COALESCE(window_title, '')) NOT LIKE '%youtube%'
-      AND LOWER(COALESCE(window_title, '')) NOT LIKE '%twitter%'
-      AND LOWER(COALESCE(window_title, '')) NOT LIKE '%facebook%'
-      AND LOWER(COALESCE(window_title, '')) NOT LIKE '%reddit%'
-      AND LOWER(COALESCE(window_title, '')) NOT LIKE '%netflix%'
-      AND LOWER(COALESCE(url, '')) NOT LIKE '%youtube.com%'
-      AND LOWER(COALESCE(url, '')) NOT LIKE '%twitter.com%'
-      AND LOWER(COALESCE(url, '')) NOT LIKE '%facebook.com%'
-      AND LOWER(COALESCE(url, '')) NOT LIKE '%reddit.com%'
-      AND LOWER(COALESCE(url, '')) NOT LIKE '%netflix.com%'
+      AND relevance = 'relevant'
     `);
     const row = stmt.get(startTime) as { total_s: number | null };
     return (row.total_s || 0) * 1000;
@@ -197,13 +196,7 @@ export class SQLiteDatabase implements IDatabase {
       SELECT SUM(duration_s) as total_s 
       FROM activity_events 
       WHERE timestamp_ms >= ? AND is_idle = 0
-      AND (
-        LOWER(application) LIKE '%youtube%' OR LOWER(COALESCE(window_title, '')) LIKE '%youtube%' OR LOWER(COALESCE(url, '')) LIKE '%youtube.com%' OR
-        LOWER(application) LIKE '%twitter%' OR LOWER(COALESCE(window_title, '')) LIKE '%twitter%' OR LOWER(COALESCE(url, '')) LIKE '%twitter.com%' OR
-        LOWER(application) LIKE '%facebook%' OR LOWER(COALESCE(window_title, '')) LIKE '%facebook%' OR LOWER(COALESCE(url, '')) LIKE '%facebook.com%' OR
-        LOWER(application) LIKE '%reddit%' OR LOWER(COALESCE(window_title, '')) LIKE '%reddit%' OR LOWER(COALESCE(url, '')) LIKE '%reddit.com%' OR
-        LOWER(application) LIKE '%netflix%' OR LOWER(COALESCE(window_title, '')) LIKE '%netflix%' OR LOWER(COALESCE(url, '')) LIKE '%netflix.com%'
-      )
+      AND relevance = 'irrelevant'
     `);
     const row = stmt.get(startTime) as { total_s: number | null };
     return (row.total_s || 0) * 1000;
@@ -213,11 +206,7 @@ export class SQLiteDatabase implements IDatabase {
     const activities = this.db.prepare(`
       SELECT id, timestamp_ms as timestamp, 
              CASE 
-               WHEN LOWER(application) LIKE '%youtube%' OR LOWER(COALESCE(window_title, '')) LIKE '%youtube%' OR LOWER(COALESCE(url, '')) LIKE '%youtube.com%' THEN 'distraction'
-               WHEN LOWER(application) LIKE '%twitter%' OR LOWER(COALESCE(window_title, '')) LIKE '%twitter%' OR LOWER(COALESCE(url, '')) LIKE '%twitter.com%' THEN 'distraction'
-               WHEN LOWER(application) LIKE '%facebook%' OR LOWER(COALESCE(window_title, '')) LIKE '%facebook%' OR LOWER(COALESCE(url, '')) LIKE '%facebook.com%' THEN 'distraction'
-               WHEN LOWER(application) LIKE '%reddit%' OR LOWER(COALESCE(window_title, '')) LIKE '%reddit%' OR LOWER(COALESCE(url, '')) LIKE '%reddit.com%' THEN 'distraction'
-               WHEN LOWER(application) LIKE '%netflix%' OR LOWER(COALESCE(window_title, '')) LIKE '%netflix%' OR LOWER(COALESCE(url, '')) LIKE '%netflix.com%' THEN 'distraction'
+               WHEN relevance = 'irrelevant' THEN 'distraction'
                ELSE 'focus_start'
              END as type, 
              application || ' - ' || COALESCE(window_title, '') as description

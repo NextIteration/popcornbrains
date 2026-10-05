@@ -49,6 +49,8 @@ export class ActivityAnalyzer {
       );
     }
 
+    console.log(`[Intelligence] Assessment for "${activity.windowTitle}": ${relevance.category} (Score: ${relevance.relevanceScore}) - Reason: ${relevance.reason}`);
+
     return this.contextAnalyzer.assessActivity(
       activity,
       intent,

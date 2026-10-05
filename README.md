@@ -5,7 +5,6 @@
 ---
 
 ## 🚀 Quick Links
-- **Live Interactive UI Demo (Vercel):** [https://popcornbrains.vercel.app](https://popcornbrains.vercel.app)
 - **GitHub Repository:** [https://github.com/NextIteration/popcornbrains](https://github.com/NextIteration/popcornbrains)
 
 ---
@@ -14,13 +13,6 @@
 
 **The Unplugged** addresses digital distraction by detecting attention drift, enforcing real-time interventions, and guiding users back into deep focus.
 
-### Core Features (Member 4 - Intervention & UI)
-- **Focus Dashboard:** Real-time focus timers, active goal/intent displays, and tracking controls.
-- **Dynamic Interventions:** Smooth cooldown overlays, breathing exercises, reflection prompts, and break suggestions when attention drift occurs.
-- **Productivity & Recovery Metrics:** Focus score tracking, distraction breakdown charts, and session stats.
-- **Flexible Controls:** Ability to start, pause, resume, change focus goals, or end focus sessions seamlessly.
-
----
 
 ## 🛠️ Tech Stack & Architecture
 

@@ -8,9 +8,7 @@ import { ContextAnalyzer } from './intelligence/ContextAnalyzer.js';
 import { ActivityAnalyzer } from './intelligence/ActivityAnalyzer.js';
 import { DriftDetector } from './intelligence/DriftDetector.js';
 import {
-  MockRelevanceAnalyzer,
   GeminiRelevanceAnalyzer,
-  OpenAIRelevanceAnalyzer,
 } from './intelligence/RelevanceAnalyzer.js';
 import type { ActivityEvent as IntelligenceActivityEvent } from './intelligence/types.js';
 
@@ -20,6 +18,7 @@ import { ReclaimScoreService } from './score/ReclaimScoreService.js';
 import { InterventionService } from './intervention/InterventionService.js';
 import { RecoveryService } from './recovery/RecoveryService.js';
 import { MockTrackingService } from './shared/mocks.js';
+import { DesktopNotifier } from './core/DesktopNotifier.js';
 
 import type { ActivityEvent } from './shared/types.js';
 import path from 'path';
@@ -38,6 +37,13 @@ const statsService = new StatisticsService(db);
 const scoreService = new ReclaimScoreService(statsService);
 
 const interventionService = new InterventionService();
+const desktopNotifier = new DesktopNotifier();
+
+// Show a system-wide toast notification whenever an intervention fires
+interventionService.setInterventionHandler((level, message, _driftEvent) => {
+  const title = level === 1 ? '⚠️ Attention' : level === 2 ? '⚠️ Attention Drift' : '🔴 Return to Focus';
+  desktopNotifier.notify(title, message);
+});
 
 // RecoveryService expects ITrackingService — use mock for now
 const mockTracking = new MockTrackingService();
@@ -56,11 +62,7 @@ const activityService = new ActivityService(services);
 
 // --- M3 Intelligence Pipeline Wiring ---
 
-const relevanceAnalyzer = process.env.GEMINI_API_KEY
-  ? new GeminiRelevanceAnalyzer()
-  : process.env.OPENAI_API_KEY
-    ? new OpenAIRelevanceAnalyzer()
-    : new MockRelevanceAnalyzer();
+const relevanceAnalyzer = new GeminiRelevanceAnalyzer();
 const contextAnalyzer = new ContextAnalyzer();
 const activityAnalyzer = new ActivityAnalyzer(relevanceAnalyzer, contextAnalyzer);
 const driftDetector = new DriftDetector(60_000); // 60s persistence threshold

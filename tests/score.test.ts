@@ -23,6 +23,7 @@ class TestDatabase implements IDatabase {
   getSuccessfulReturnsToday() { return this.returns; }
   getFocusTimeToday() { return this.focusMs; }
   getDistractionTimeToday() { return this.distractionMs; }
+  setSessionStartMs(ms: number | null): void {}
 }
 
 describe('ReclaimScoreService', () => {

@@ -73,6 +73,14 @@ export class DesktopTracker {
       const title = win.title;
       const owner = win.processName;
 
+      const lowerOwner = owner.toLowerCase();
+      if (lowerOwner.includes('chrome') || lowerOwner.includes('msedge') || lowerOwner.includes('firefox')) {
+        if (this.currentWindow) {
+          this.finalizeCurrentWindow(now);
+        }
+        return;
+      }
+
       if (!this.currentWindow || this.currentWindow.title !== title || this.currentWindow.owner !== owner) {
         if (this.currentWindow) {
           this.finalizeCurrentWindow(now);

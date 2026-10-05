@@ -68,6 +68,9 @@ describe('SQLiteDatabase', () => {
       metadata: {}
     });
 
+    db.updateActivityRelevance('evt-1', 'relevant');
+    db.updateActivityRelevance('evt-2', 'irrelevant');
+
     expect(db.getScreenTimeToday()).toBe((3600 + 1800) * 1000); // 1.5 hours in ms
     
     const usage = db.getAppUsageToday();

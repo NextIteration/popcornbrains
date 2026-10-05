@@ -1,5 +1,4 @@
 import type { UserIntent } from '../shared/types.js';
-import OpenAI from 'openai';
 
 export type RelevanceCategory =
   | 'relevant'
@@ -78,104 +77,6 @@ export class MockRelevanceAnalyzer implements RelevanceAnalyzer {
   }
 }
 
-export class OpenAIRelevanceAnalyzer implements RelevanceAnalyzer {
-  private readonly client: OpenAI;
-  private readonly model: string;
-
-  constructor(
-    apiKey = process.env.OPENAI_API_KEY,
-    model = process.env.OPENAI_MODEL ?? 'gpt-6-luna',
-  ) {
-    if (!apiKey) {
-      throw new Error('OPENAI_API_KEY is not configured');
-    }
-
-    this.client = new OpenAI({
-      apiKey,
-    });
-
-    this.model = model;
-  }
-
-  async analyze(input: RelevanceInput): Promise<RelevanceResult> {
-    const response = await this.client.responses.create({
-      model: this.model,
-      input: [
-        {
-          role: 'system',
-          content:
-            `You are a precise focus-drift detector. Your ONLY job is to decide whether the user's current screen activity is semantically related to their stated focus intent.
-
-CRITICAL RULES:
-- Compare the ACTUAL CONTENT (window title, page title, URL path, metadata) against the intent's meaning. Do NOT judge by platform/domain alone.
-- A YouTube video titled "DBMS Normalization Lecture" IS relevant to intent "Study DBMS normalization" — the platform is irrelevant, the content matters.
-- A YouTube video titled "Top 10 Gaming Moments" is NOT relevant to intent "Study DBMS normalization" — even though both are on YouTube.
-- Mark "irrelevant" ONLY when the content is CLEARLY unrelated to the intent. When in doubt, prefer "partially_relevant".
-- For relevanceScore: 70-100 = clearly on-topic, 40-69 = tangentially related, 0-39 = clearly off-topic.
-- In "reason", explain what the content is about and why it does or does not match the intent.`,
-        },
-        {
-          role: 'user',
-          content: JSON.stringify({
-            intentDescription: input.intent.description,
-            applicationHints: input.intent.applicationHints ?? [],
-            windowTitle: input.title,
-            url: input.url,
-            pageMetadata: input.metadata ?? {},
-          }),
-        },
-      ],
-      text: {
-        format: {
-          type: 'json_schema',
-          name: 'relevance_result',
-          strict: true,
-          schema: {
-            type: 'object',
-            properties: {
-              relevanceScore: {
-                type: 'number',
-                minimum: 0,
-                maximum: 100,
-              },
-              category: {
-                type: 'string',
-                enum: [
-                  'relevant',
-                  'partially_relevant',
-                  'irrelevant',
-                ],
-              },
-              reason: {
-                type: 'string',
-              },
-            },
-            required: [
-              'relevanceScore',
-              'category',
-              'reason',
-            ],
-            additionalProperties: false,
-          },
-        },
-      },
-    });
-
-    let parsed: unknown;
-
-    try {
-      parsed = JSON.parse(response.output_text);
-    } catch {
-      throw new Error('OpenAI returned invalid relevance JSON');
-    }
-
-    if (!validateRelevanceResult(parsed)) {
-      throw new Error('OpenAI returned an invalid relevance result');
-    }
-
-    return parsed;
-  }
-}
 
 export class GeminiRelevanceAnalyzer implements RelevanceAnalyzer {
   private readonly apiKey: string;

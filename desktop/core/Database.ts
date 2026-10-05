@@ -205,12 +205,10 @@ export class SQLiteDatabase implements IDatabase {
   public getRecentActivity(limit: number = 50): ActivityEntry[] {
     const activities = this.db.prepare(`
       SELECT id, timestamp_ms as timestamp, 
-             CASE 
-               WHEN relevance = 'irrelevant' THEN 'distraction'
-               ELSE 'focus_start'
-             END as type, 
+             'focus_start' as type, 
              application || ' - ' || COALESCE(window_title, '') as description
       FROM activity_events
+      WHERE relevance != 'irrelevant' OR relevance IS NULL
       ORDER BY timestamp_ms DESC
       LIMIT ?
     `).all(limit) as any[];

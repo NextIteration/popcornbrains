@@ -63,6 +63,9 @@ export class ActivityAnalyzer {
   private toActivityRelevance(
     result: RelevanceResult,
   ): ActivityRelevance {
+    if (result.category === 'partially_relevant') {
+      return 'unknown';
+    }
     return result.category;
   }
 }

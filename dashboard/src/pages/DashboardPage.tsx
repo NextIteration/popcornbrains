@@ -150,10 +150,6 @@ export function DashboardPage({ stats, score, intent, setIntent, clearIntent, ac
                 iconClass = 'recovery';
                 iconChar = '↩';
                 subtitle = 'Successful return';
-              } else if (activity.type === 'distraction') {
-                iconClass = 'drift';
-                iconChar = '✕';
-                subtitle = 'Distraction';
               }
 
               // Try to parse app name out of description for a cleaner look

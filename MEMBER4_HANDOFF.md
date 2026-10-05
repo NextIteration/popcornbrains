@@ -52,7 +52,8 @@ M4 is waiting for real services from other members:
 - Connect real browser tab Return-to-Task.
 - Validate the complete end-to-end intervention flow.
 
-## Validation
+## Validation & Submission
+- `README.md` — ✅ Created for Vercel deployment & GitHub project submission
 - `npm run build` — ✅ Passed
 - `npx tsc --noEmit` — ✅ Passed
 - `npm run test` (vitest) — ✅ Passed (50/50 tests)
